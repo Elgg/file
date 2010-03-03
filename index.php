@@ -1,36 +1,43 @@
 <?php
-/**
- * Elgg index page for web-based applications
- *
- * @package Elgg
- * @subpackage Core
- * @author Curverider Ltd
- * @link http://elgg.org/
- */
-
-/**
- * Start the Elgg engine
- */
-define('externalpage',true);
-require_once(dirname(__FILE__) . "/engine/start.php");
-
-if (!trigger_plugin_hook('index', 'system', null, FALSE)) {
 	/**
-	 * Check to see if user is logged in, if not display login form
-	 **/
+	 * Elgg file browser
+	 * 
+	 * @package ElggFile
+	 * @author Curverider Ltd
+	 * @copyright Curverider Ltd 2008-2010
+	 * @link http://elgg.com/
+	 * 
+	 * 
+	 * TODO: File icons, download & mime types
+	 */
 
-	if (isloggedin()) {
-		forward('pg/dashboard/');
+	require_once(dirname(dirname(dirname(__FILE__))) . "/engine/start.php");
+
+	if (is_callable('group_gatekeeper')) {
+		group_gatekeeper();
+	}
+	
+	//set the title
+	if (page_owner() == get_loggedin_userid()) {
+		$title = elgg_echo('file:yours');
+	} else {
+		$title = sprintf(elgg_echo("file:user"),page_owner_entity()->name);
+	}
+			
+	$area2 = elgg_view_title($title);
+		
+	// Get objects
+	set_context('search');
+	$area2 .= elgg_list_entities(array('types' => 'object', 'subtypes' => 'file', 'container_guid' => page_owner(), 'limit' => 10, 'full_view' => FALSE));
+	set_context('file');
+	$get_filter = get_filetype_cloud(page_owner());
+	if ($get_filter) {
+		$area1 = $get_filter;
+	} else {
+		$area2 .= elgg_view('page_elements/contentwrapper',array('body' => elgg_echo("file:none")));
 	}
 
-	//Load the front page
-	global $CONFIG;
-	$title = elgg_view_title(elgg_echo('content:latest'));
-	set_context('search');
-	$content = elgg_list_registered_entities(array('limit' => 10, 'full_view' => FALSE, 'allowed_types' => array('object','group')));
-	set_context('main');
-	global $autofeed;
-	$autofeed = FALSE;
-	$content = elgg_view_layout('two_column_left_sidebar', '', $title . $content, elgg_view("account/forms/login"));
-	page_draw(null, $content);
-}
+	$body = elgg_view_layout('two_column_left_sidebar', $area1, $area2);
+	
+	page_draw($title, $body);
+?>
